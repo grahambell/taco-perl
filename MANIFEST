@@ -1,0 +1,12 @@
+bin/taco-perl
+Build.PL
+COPYING
+lib/Alien/Taco.pm
+lib/Alien/Taco/Object.pm
+lib/Alien/Taco/Server.pm
+lib/Alien/Taco/Transport.pm
+lib/Alien/Taco/Util.pm
+MANIFEST
+META.json
+META.yml
+t/1_compile.t

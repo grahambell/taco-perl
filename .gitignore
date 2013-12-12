@@ -1,0 +1,7 @@
+*~
+*.swp
+/_build
+/blib
+/*META.*
+/Alien-Taco-*.tar.gz
+/Build
