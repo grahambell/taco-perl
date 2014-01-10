@@ -209,7 +209,10 @@ do {
 =item call_function($message)
 
 Call the function specified in the message.  The function is called
-in the requested context (void / scalar / list) if specified.
+in the requested context (void / scalar / list) if specified.  A
+context of "hash" can also be specified to avoid the client having
+to convert a list to a hash in cases where the function returns
+a hash directly.
 
 The function is called with an argument list consisting of the
 I<args> followed by the I<kwargs> in list form.  To supply a
@@ -232,6 +235,10 @@ sub call_function {
     elsif ($message->{'context'} eq 'list') {
         my @result = $f->(@param);
         $result = \@result;
+    }
+    elsif ($message->{'context'} eq 'hash') {
+        my %result = $f->(@param);
+        $result = \%result;
     }
     elsif ($message->{'context'} eq 'void') {
         $f->(@param);
@@ -266,6 +273,10 @@ sub call_method {
     elsif ($message->{'context'} eq 'list') {
         my @result = $object->$name(@param);
         $result = \@result;
+    }
+    elsif ($message->{'context'} eq 'hash') {
+        my %result = $object->$name(@param);
+        $result = \%result;
     }
     elsif ($message->{'context'} eq 'void') {
         $object->$name(@param);
