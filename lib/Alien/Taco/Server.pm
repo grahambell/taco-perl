@@ -1,5 +1,5 @@
 # Taco Perl server module.
-# Copyright (C) 2013 Graham Bell
+# Copyright (C) 2013-2014 Graham Bell
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -171,10 +171,14 @@ do {
     # Replace objects in the given message with Taco object number references.
 
     sub _replace_objects {
-       filter_struct(shift, \&blessed, sub {
-           $object{++ $nobject} = shift;
-           return {_Taco_Object_ => $nobject};
-       });
+        filter_struct(shift, sub {
+            my $x = shift;
+            blessed($x) and not JSON::is_bool($x);
+        },
+        sub {
+            $object{++ $nobject} = shift;
+            return {_Taco_Object_ => $nobject};
+        });
     }
 
     # _delete_object($number)
