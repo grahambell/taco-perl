@@ -1,5 +1,5 @@
 # Taco Perl client module.
-# Copyright (C) 2013 Graham Bell
+# Copyright (C) 2013-2014 Graham Bell
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -168,6 +168,33 @@ The methods in this section allow the corresponding Taco actions to be sent.
 
 =over 4
 
+=item call_class_method('class_name', 'function_name',
+      [args => \@args], [kwargs => \%kwargs])
+
+Invoke a class method call within the Taco server script, returning the
+result of that method. The context (void / scalar / list)
+is detected and sent as a parameter.  Since Perl subroutine arguments
+are expanded into a list, the I<arguments> and I<keyword arguments>
+must be given separately.
+
+=cut
+
+sub call_class_method {
+    my $self = shift;
+    my $class = shift;
+    my $name = shift;
+    my %opts = @_;
+
+    return $self->_interact({
+        action => 'call_class_method',
+        class => $class,
+        name => $name,
+        args => $opts{'args'},
+        kwargs => $opts{'kwargs'},
+        context => (defined wantarray ? (wantarray?'list':'scalar') : 'void'),
+    });
+}
+
 =item call_function('function_name', [args => \@args], [kwargs => \%kwargs])
 
 Invoke a function call within the Taco server script, returning the
@@ -222,12 +249,12 @@ The given arguments are passed to the object constructor.
 
 sub construct_object {
     my $self = shift;
-    my $name = shift;
+    my $class = shift;
     my %opts = @_;
 
     return $self->_interact({
         action => 'construct_object',
-        name => $name,
+        class => $class,
         args => $opts{'args'},
         kwargs => $opts{'kwargs'},
     });
@@ -383,10 +410,10 @@ method:
 
 sub constructor {
     my $self = shift;
-    my $name = shift;
+    my $class = shift;
 
     return sub {
-        $self->construct_object($name, args => \@_);
+        $self->construct_object($class, args => \@_);
     };
 }
 

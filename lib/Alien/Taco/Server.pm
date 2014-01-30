@@ -45,6 +45,7 @@ our $VERSION = '0.001';
 # to call for each.
 
 my %actions = (
+    call_class_method => \&call_class_method,
     call_function => \&call_function,
     call_method => \&call_method,
     construct_object => \&construct_object,
@@ -206,6 +207,45 @@ do {
 
 =over 4
 
+=item call_class_method($message)
+
+Call the class method specified in the message, similarly to
+C<call_function>.
+
+=cut
+
+sub call_class_method {
+    my $message = shift;
+
+    my $c = $message->{'class'};
+    my $f = $message->{'name'};
+    my @param = _get_param($message);
+
+    my $result = undef;
+    unless (defined $message->{'context'}
+                and $message->{'context'} ne 'scalar') {
+        $result = $c->$f(@param);
+    }
+    elsif ($message->{'context'} eq 'list') {
+        my @result = $c->$f(@param);
+        $result = \@result;
+    }
+    elsif ($message->{'context'} eq 'hash') {
+        my %result = $c->$f(@param);
+        $result = \%result;
+    }
+    elsif ($message->{'context'} eq 'void') {
+        $c->$f(@param);
+    }
+    else {
+        die 'unknown context: ' . $message->{'context'};
+    }
+
+    return _make_result($result);
+}
+
+
+
 =item call_function($message)
 
 Call the function specified in the message.  The function is called
@@ -297,7 +337,7 @@ Call an object constructor.
 sub construct_object {
     my $message = shift;
 
-    my $c = $message->{'name'};
+    my $c = $message->{'class'};
     my @param = _get_param($message);
 
     return _make_result($c->new(@param));
