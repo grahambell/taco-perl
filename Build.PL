@@ -14,6 +14,8 @@ my $build = new Module::Build(
         'JSON' => 0,
     },
     build_requires => {
+        'DateTime' => 0,
+        'IO::String' => 0,
         'Test::More' => 0,
     },
 );

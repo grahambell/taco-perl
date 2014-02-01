@@ -1,0 +1,192 @@
+# Test server messages.
+#
+# This test script checks that the server handles Taco messages correctly.
+
+use strict;
+
+use Test::More tests => 19;
+
+BEGIN {use_ok('Alien::Taco::Server');}
+
+my ($context, @param, $test_var);
+our $variable = 1234;
+
+# Insert the test object manually as we are not using the server's main loop
+# which normally calls _replace_objects.
+my $o = new TestObject();
+Alien::Taco::Server::_replace_objects({o => $o});
+
+
+is_deeply(Alien::Taco::Server::call_class_method({
+        name => 'class_method',
+        class => 'TestObject',
+        args => undef,
+        kwargs => undef,
+        context => 'void',
+    }),
+    {
+        action => 'result',
+        result => undef,
+    },
+    'call_class_method');
+
+is($TestObject::context, undef, 'void context');
+
+
+is_deeply(Alien::Taco::Server::call_function({
+        name => 'main::test_func',
+        context => 'scalar',
+        args => [qw/x y z/],
+        kwargs => {e => 'f'},
+    }),
+    {
+        action => 'result',
+        result => 4444,
+    },
+    'call_function');
+
+ok(!$context, 'scalar context');
+
+is_deeply(\@param, [qw/x y z e f/], 'function parameters');
+
+
+is_deeply(Alien::Taco::Server::call_method({
+        number => 1,
+        name => 'test_method',
+        args => ['AAA'],
+        kwargs => {BBB => 'CCC'},
+        context => 'hash',
+    }),
+    {
+        action => 'result',
+        result => {55555 => 666666},
+    },
+    'call_method (hash)');
+
+ok($o->{'context'}, 'hash context');
+
+is_deeply($o->{'param'}, [qw/AAA BBB CCC/], 'method paramters');
+
+
+is_deeply(Alien::Taco::Server::call_method({
+        number => 1,
+        name => 'test_method',
+        args => undef,
+        kwargs => undef,
+        context => 'list',
+    }),
+    {
+        action => 'result',
+        result => [55555, 666666],
+    },
+    'call_method (list)');
+
+ok($o->{'context'}, 'list context');
+
+
+my $res = Alien::Taco::Server::construct_object({
+        class => 'TestObject',
+        args => undef,
+        kwargs => undef,
+    });
+
+isa_ok(my $o = $res->{'result'}, 'TestObject');
+
+
+is_deeply(Alien::Taco::Server::destroy_object({
+        number => 1,
+    }),
+    {
+        action => 'result',
+        result => undef,
+    },
+    'destroy_object');
+
+is(Alien::Taco::Server::_get_object(1), undef, 'object deleted');
+
+# Put it back for further tests.
+Alien::Taco::Server::_replace_objects({o => $o});
+
+
+is_deeply(Alien::Taco::Server::get_attribute({
+        number => 2,
+        name => 'k',
+    }),
+    {
+        action => 'result',
+        result => 'v',
+    },
+    'get_attribute');
+
+is_deeply(Alien::Taco::Server::get_value({
+        name => '$main::variable',
+    }),
+    {
+        action => 'result',
+        result => 1234,
+    },
+    'get_value');
+
+
+$INC{'TestModule.pm'} = 't/4_server_msg.t';
+Alien::Taco::Server::import_module({
+        name => 'TestModule',
+        args => [qw/a b/],
+        kwargs => {c => 'd'},
+    });
+is_deeply(\@TestModule::use_param, [qw/a b c d/], 'import_module');
+
+
+Alien::Taco::Server::set_attribute({
+        number => 2,
+        name => 'k',
+        value => 'newval',
+    });
+is($o->{'k'}, 'newval', 'set_attribute');
+
+
+Alien::Taco::Server::set_value({
+        name => '$main::variable',
+        value => 4321,
+    });
+is($variable, 4321, 'set_value');
+
+
+sub test_func {
+    $context = wantarray;
+    @param = @_;
+    return 4444;
+}
+
+
+package TestObject;
+
+our $context = 'not set yet';
+
+sub new {
+    my $class = shift;
+    return bless {k => 'v'}, $class;
+}
+
+sub test_method {
+    my $self = shift;
+    $self->{'context'} = wantarray;
+    $self->{'param'} = [@_];
+    return (55555, 666666);
+}
+
+sub class_method {
+    my $class = shift;
+    $context = wantarray;
+    return 7777777;
+}
+
+
+package TestModule;
+
+our @use_param;
+
+sub import {
+    my $package = shift;
+    @use_param = @_;
+}

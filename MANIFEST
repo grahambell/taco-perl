@@ -10,3 +10,10 @@ MANIFEST
 META.json
 META.yml
 t/1_compile.t
+t/2_object.t
+t/2_transport.t
+t/2_util.t
+t/3_client_sub.t
+t/3_server_sub.t
+t/4_client_msg.t
+t/4_server_msg.t
