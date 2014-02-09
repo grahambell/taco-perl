@@ -1,7 +1,7 @@
 #!/usr/bin/env perl
 
 # Taco Perl server launch script.
-# Copyright (C) 2013 Graham Bell
+# Copyright (C) 2013-2014 Graham Bell
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -50,5 +50,6 @@ elsif ($version) {
     printf("taco-perl %s\n", $Alien::Taco::Server::VERSION)
 }
 else {
-    Alien::Taco::Server::main();
+    my $server = new Alien::Taco::Server();
+    $server->run();
 }

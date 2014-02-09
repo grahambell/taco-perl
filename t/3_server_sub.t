@@ -5,6 +5,7 @@
 use strict;
 
 use DateTime;
+use IO::String;
 
 use Test::More tests => 9;
 
@@ -40,6 +41,8 @@ foreach ([
 
 # Test object handling.
 
+my $s = new TestServer();
+
 my $obj = DateTime->now();
 
 my %hash = (test_object => $obj);
@@ -50,10 +53,51 @@ is_deeply($hash{'test_object'}, {_Taco_Object_ => 1}, 'replace object');
 
 isa_ok(Alien::Taco::Server::_get_object(1), 'DateTime');
 
-Alien::Taco::Server::_interpret_objects(\%hash);
-
-isa_ok($hash{'test_object'}, 'DateTime');
+$s->prepare_input('{"x": {"_Taco_Object_": 1}}');
+my $r = $s->{'xp'}->read();
+isa_ok($r->{'x'}, 'DateTime');
 
 Alien::Taco::Server::_delete_object(1);
 
 is(Alien::Taco::Server::_get_object(1), undef, 'delete object');
+
+
+# Dummy Taco server.
+
+package TestServer;
+
+use parent 'Alien::Taco::Server';
+
+sub new {
+    my $class = shift;
+
+    my $in_io = new IO::String();
+    my $out_io = new IO::String();
+
+    my $self = bless {
+        in_io => $in_io,
+        out_io => $out_io,
+    }, $class;
+
+    $self->{'xp'} = $self->_construct_transport($in_io, $out_io);
+
+    return $self;
+}
+
+sub prepare_input {
+    my $self = shift;
+
+    ${$self->{'in_io'}->string_ref()} = shift . "\n// END\n";
+    $self->{'in_io'}->seek(0);
+}
+
+sub get_output {
+    my $self = shift;
+
+    my $text = ${$self->{'out_io'}->string_ref()};
+    ${$self->{'out_io'}->string_ref()} = '';
+    $self->{'out_io'}->seek(0);
+
+    die 'end marker not found' unless $text =~ s/\n\/\/ END\n$//;
+    return $text;
+}

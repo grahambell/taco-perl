@@ -21,7 +21,8 @@ Alien::Taco::Server - Taco Perl server module
 =head1 SYNOPSIS
 
     use Alien::Taco::Server;
-    Alien::Taco::Server::main();
+    my $server = new Alien::Taco::Server();
+    $server->run();
 
 =head1 DESCRIPTION
 
@@ -41,33 +42,16 @@ use strict;
 
 our $VERSION = '0.001';
 
-# List of handled Taco actions and the handler subroutines
-# to call for each.
-
-my %actions = (
-    call_class_method => \&call_class_method,
-    call_function => \&call_function,
-    call_method => \&call_method,
-    construct_object => \&construct_object,
-    destroy_object => \&destroy_object,
-    get_attribute => \&get_attribute,
-    get_value => \&get_value,
-    import_module => \&import_module,
-    set_attribute => \&set_attribute,
-    set_value => \&set_value,
-);
-
 =head1 SUBROUTINES
 
-=head2 Main Subroutine
+=head2 Main Methods
 
 =over 4
 
-=item main()
+=item new()
 
 Set up a L<Alien::Taco::Transport> object communicating via
-C<STDIN> and C<STDOUT> and enter the message handling loop,
-which exits on failure to read from the transport.
+C<STDIN> and C<STDOUT>.
 
 C<STDERR> is selected as the current stream to try to avoid
 any subroutine or method calls printing to C<STDOUT> which would
@@ -75,24 +59,57 @@ corrupt communications with the client.
 
 =cut
 
-sub main {
+sub new {
+    my $class = shift;
+
+    my $self = bless {}, $class;
+
     # Select STDERR as current file handle so that if a function is
     # called which in turn prints something, it doesn't go into the
     # transport stream.
     select(STDERR);
 
-    my $xp = new Alien::Taco::Transport(in => *STDIN, out => *STDOUT);
+    $self->{'xp'} = $self->_construct_transport(*STDIN, *STDOUT);
+
+    return $self;
+}
+
+# _construct_transport
+#
+# Implements construction of the Alien::Taco::Transport object.
+
+sub _construct_transport {
+    my $self = shift;
+    my $in = shift;
+    my $out = shift;
+
+    return new Alien::Taco::Transport(in => $in, out => $out,
+            filter_single => ['_Taco_Object_' =>  sub {
+                return _get_object(shift);
+            }],
+    );
+}
+
+=item run()
+
+Enter the message handling loop, which exits on failure to read from
+the transport.
+
+=cut
+
+sub run {
+    my $self = shift;
+    my $xp = $self->{'xp'};
 
     while (1) {
         my $message = $xp->read();
         last unless defined $message;
-        _interpret_objects($message);
 
         my $act = $message->{'action'};
         my $res = undef;
 
-        if (exists $actions{$act}) {
-            $res = eval {$actions{$act}->($message)};
+        if ($act !~ /^_/ and $self->can($act)) {
+            $res = eval {$self->$act($message)};
 
             $res = {
                 action => 'exception',
@@ -152,21 +169,6 @@ do {
     my %object = ();
     my $nobject = 0;
 
-    # _interpret_objects(\%message)
-    #
-    # Replace Taco object number references in the given message with objects
-    # from the object cache.
-
-    sub _interpret_objects {
-        filter_struct(shift, sub {
-            my $x = shift;
-            return ref $x eq 'HASH' && exists $x->{'_Taco_Object_'};
-        },
-        sub {
-            return _get_object(shift->{'_Taco_Object_'});
-        });
-    }
-
     # _replace_objects(\%message)
     #
     # Replace objects in the given message with Taco object number references.
@@ -215,6 +217,7 @@ C<call_function>.
 =cut
 
 sub call_class_method {
+    my $self = shift;
     my $message = shift;
 
     my $c = $message->{'class'};
@@ -262,6 +265,7 @@ one of the arguments paramters of the message.
 =cut
 
 sub call_function {
+    my $self = shift;
     my $message = shift;
 
     my $f = \&{$message->{'name'}};
@@ -297,6 +301,7 @@ Call an object method, similarly to C<call_function>.
 =cut
 
 sub call_method {
+    my $self = shift;
     my $message = shift;
 
     my $number = $message->{'number'};
@@ -335,6 +340,7 @@ Call an object constructor.
 =cut
 
 sub construct_object {
+    my $self = shift;
     my $message = shift;
 
     my $c = $message->{'class'};
@@ -350,6 +356,7 @@ Remove an object from the cache.
 =cut
 
 sub destroy_object {
+    my $self = shift;
     my $message = shift;
 
     my $n = $message->{'number'};
@@ -368,6 +375,7 @@ accessed by calling the corresponding method on the object instead.
 =cut
 
 sub get_attribute {
+    my $self = shift;
     my $message = shift;
 
     my $number = $message->{'number'};
@@ -388,6 +396,7 @@ with the appropriate sigil (C<$> / C<@> / C<%>).
 =cut
 
 sub get_value {
+    my $self = shift;
     my $message = shift;
 
     my $name = $message->{'name'};
@@ -417,6 +426,7 @@ to C<import>.
 =cut
 
 sub import_module {
+    my $self = shift;
     my $message = shift;
     my @param = _get_param($message);
 
@@ -437,6 +447,7 @@ C<get_attribute> above.
 =cut
 
 sub set_attribute {
+    my $self = shift;
     my $message = shift;
 
     my $number = $message->{'number'};
@@ -460,6 +471,7 @@ with the appropriate sigil (C<$> / C<@> / C<%>).
 =cut
 
 sub set_value {
+    my $self = shift;
     my $message = shift;
 
     my $name = $message->{'name'};

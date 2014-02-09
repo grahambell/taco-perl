@@ -16,8 +16,9 @@ our $variable = 1234;
 my $o = new TestObject();
 Alien::Taco::Server::_replace_objects({o => $o});
 
+my $s = bless {}, 'Alien::Taco::Server';
 
-is_deeply(Alien::Taco::Server::call_class_method({
+is_deeply($s->call_class_method({
         name => 'class_method',
         class => 'TestObject',
         args => undef,
@@ -33,7 +34,7 @@ is_deeply(Alien::Taco::Server::call_class_method({
 is($TestObject::context, undef, 'void context');
 
 
-is_deeply(Alien::Taco::Server::call_function({
+is_deeply($s->call_function({
         name => 'main::test_func',
         context => 'scalar',
         args => [qw/x y z/],
@@ -50,7 +51,7 @@ ok(!$context, 'scalar context');
 is_deeply(\@param, [qw/x y z e f/], 'function parameters');
 
 
-is_deeply(Alien::Taco::Server::call_method({
+is_deeply($s->call_method({
         number => 1,
         name => 'test_method',
         args => ['AAA'],
@@ -68,7 +69,7 @@ ok($o->{'context'}, 'hash context');
 is_deeply($o->{'param'}, [qw/AAA BBB CCC/], 'method paramters');
 
 
-is_deeply(Alien::Taco::Server::call_method({
+is_deeply($s->call_method({
         number => 1,
         name => 'test_method',
         args => undef,
@@ -84,7 +85,7 @@ is_deeply(Alien::Taco::Server::call_method({
 ok($o->{'context'}, 'list context');
 
 
-my $res = Alien::Taco::Server::construct_object({
+my $res = $s->construct_object({
         class => 'TestObject',
         args => undef,
         kwargs => undef,
@@ -93,7 +94,7 @@ my $res = Alien::Taco::Server::construct_object({
 isa_ok(my $o = $res->{'result'}, 'TestObject');
 
 
-is_deeply(Alien::Taco::Server::destroy_object({
+is_deeply($s->destroy_object({
         number => 1,
     }),
     {
@@ -108,7 +109,7 @@ is(Alien::Taco::Server::_get_object(1), undef, 'object deleted');
 Alien::Taco::Server::_replace_objects({o => $o});
 
 
-is_deeply(Alien::Taco::Server::get_attribute({
+is_deeply($s->get_attribute({
         number => 2,
         name => 'k',
     }),
@@ -118,7 +119,7 @@ is_deeply(Alien::Taco::Server::get_attribute({
     },
     'get_attribute');
 
-is_deeply(Alien::Taco::Server::get_value({
+is_deeply($s->get_value({
         name => '$main::variable',
     }),
     {
@@ -129,7 +130,7 @@ is_deeply(Alien::Taco::Server::get_value({
 
 
 $INC{'TestModule.pm'} = 't/4_server_msg.t';
-Alien::Taco::Server::import_module({
+$s->import_module({
         name => 'TestModule',
         args => [qw/a b/],
         kwargs => {c => 'd'},
@@ -137,7 +138,7 @@ Alien::Taco::Server::import_module({
 is_deeply(\@TestModule::use_param, [qw/a b c d/], 'import_module');
 
 
-Alien::Taco::Server::set_attribute({
+$s->set_attribute({
         number => 2,
         name => 'k',
         value => 'newval',
@@ -145,7 +146,7 @@ Alien::Taco::Server::set_attribute({
 is($o->{'k'}, 'newval', 'set_attribute');
 
 
-Alien::Taco::Server::set_value({
+$s->set_value({
         name => '$main::variable',
         value => 4321,
     });
