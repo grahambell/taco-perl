@@ -1,5 +1,5 @@
 # Taco Perl object module.
-# Copyright (C) 2013 Graham Bell
+# Copyright (C) 2013-2014 Graham Bell
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -149,6 +149,24 @@ sub method {
     return sub {
         return $self->call_method($name, args => \@_);
     };
+}
+
+=back
+
+=head2 JSON Methods
+
+=over 4
+
+=item TO_JSON
+
+This method will be called by the JSON encoder to convert the object
+to a hashref which is encodable as JSON.
+
+=cut
+
+sub TO_JSON {
+    my $self = shift;
+    return {_Taco_Object_ => $self->{'number'}};
 }
 
 1;

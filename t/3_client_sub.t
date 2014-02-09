@@ -11,35 +11,22 @@ use Test::More tests => 11;
 BEGIN {use_ok('Alien::Taco');}
 BEGIN {use_ok('Alien::Taco::Object');}
 
-my $in = '';
-my $out = '';
-
-my $in_io = new IO::String($in);
-my $out_io = new IO::String($out);
-
-
-# Create Taco client without invoking a server script.
-
-my $t = bless
-    {xp => new Alien::Taco::Transport(in => $in_io, out => $out_io)},
-    'Alien::Taco';
+my $t = new TestClient();
 
 
 # Test interaction method.
 
-$in = "{\"action\": \"result\", \"result\": 46}\n// END\n";
+$t->prepare_input('{"action": "result", "result": 46}');
 is($t->_interact({action => 'test'}), 46, 'read result');
 
-is($out, "{\"action\":\"test\"}\n// END\n", 'write test action');
+is($t->get_output(), '{"action":"test"}', 'write test action');
 
-$in = "{\"action\": \"non-existant action\"}\n// END\n";
-$in_io->seek(0);
+$t->prepare_input('{"action": "non-existent action"}');
 eval {$t->_interact({action => 'test'});};
 ok($@, 'detect unknown action error');
 like($@, qr/unknown action/, 'raise unknown action error');
 
-$in = "{\"action\": \"exception\", \"message\": \"test_exc\"}\n// END\n";
-$in_io->seek(0);
+$t->prepare_input('{"action": "exception", "message": "test_exc"}');
 eval {$t->_interact({action => 'test'});};
 ok($@, 'receive exception');
 like($@, qr/test_exc/, 're-raise exception');
@@ -47,12 +34,55 @@ like($@, qr/test_exc/, 're-raise exception');
 
 # Test object handling.
 
-my %hash = (x => new Alien::Taco::Object(undef, 78));
-Alien::Taco::_replace_objects(\%hash);
-is_deeply($hash{'x'}, {_Taco_Object_ => 78}, 'replace object');
+$t->prepare_input('{"action": "result", "result": {"_Taco_Object_": 678}}');
+$t->get_output();
+my $res = $t->_interact({x => new Alien::Taco::Object(undef, 78)});
 
-%hash = (z => {_Taco_Object_ => 678});
-$t->_interpret_objects(\%hash);
-my $res = $hash{'z'};
+is($t->get_output(), '{"x":{"_Taco_Object_":78}}', 'replace object');
+
 isa_ok($res, 'Alien::Taco::Object');
 is($res->_number(), 678, 'interpret object number');
+
+
+# Dummy Taco client without invoking a server script.
+
+package TestClient;
+
+use parent 'Alien::Taco';
+
+sub new {
+    my $class = shift;
+
+    my $in_io = new IO::String();
+    my $out_io = new IO::String();
+
+    my $self = bless {
+        in_io => $in_io,
+        out_io => $out_io,
+    }, $class;
+
+    $self->{'xp'} = $self->_construct_transport($in_io, $out_io);
+
+    return $self;
+}
+
+sub prepare_input {
+    my $self = shift;
+
+    ${$self->{'in_io'}->string_ref()} = shift . "\n// END\n";
+    $self->{'in_io'}->seek(0);
+}
+
+sub get_output {
+    my $self = shift;
+
+    my $text = ${$self->{'out_io'}->string_ref()};
+    ${$self->{'out_io'}->string_ref()} = '';
+    $self->{'out_io'}->seek(0);
+
+    die 'end marker not found' unless $text =~ s/\n\/\/ END\n$//;
+    return $text;
+}
+
+sub _destroy_object {
+}

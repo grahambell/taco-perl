@@ -1,5 +1,5 @@
 # Taco Perl transport module.
-# Copyright (C) 2013 Graham Bell
+# Copyright (C) 2013-2014 Graham Bell
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -48,10 +48,17 @@ sub new {
     my $class = shift;
     my %opts = @_;
 
+    my $json = new JSON();
+    $json->convert_blessed(1);
+
+    if (exists $opts{'filter_single'}) {
+        $json->filter_json_single_key_object(@{$opts{'filter_single'}});
+    }
+
     my $self = {
         in => $opts{'in'},
         out => $opts{'out'},
-        json => new JSON(),
+        json => $json,
     };
 
     return bless $self, $class;

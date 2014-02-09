@@ -38,7 +38,6 @@ use Scalar::Util qw/blessed/;
 
 use Alien::Taco::Object;
 use Alien::Taco::Transport;
-use Alien::Taco::Util qw/filter_struct/;
 
 use strict;
 
@@ -77,17 +76,30 @@ sub new {
         die 'languange or script not specified';
     }
 
-    my ($in, $out);
-    my $pid = open2($out, $in, $serv);
+    my ($serv_in, $serv_out);
+    my $pid = open2($serv_out, $serv_in, $serv);
 
-    my $self = {
-        xp => new Alien::Taco::Transport(
-            in => $out,
-            out => $in,
-        ),
-    };
+    my $self = bless {}, $class;
 
-    return bless $self, $class;
+    $self->{'xp'} = $self->_construct_transport($serv_out, $serv_in);
+
+    return $self;
+}
+
+# _construct_transport()
+
+sub _construct_transport {
+    my $self = shift;
+    my $in = shift;
+    my $out = shift;
+
+    return new Alien::Taco::Transport(
+            in => $in,
+            out => $out,
+            filter_single => ['_Taco_Object_' =>  sub {
+                return new Alien::Taco::Object($self, shift);
+            }],
+    );
 }
 
 # _interact(\%message)
@@ -105,59 +117,23 @@ sub _interact {
     my $message = shift;
     my $xp = $self->{'xp'};
 
-    _replace_objects($message);
     $xp->write($message);
 
     my $res = $xp->read();
     my $act = $res->{'action'};
 
     if ($act eq 'result') {
-        $self->_interpret_objects($res);
-
         return @{$res->{'result'}}
             if wantarray and 'ARRAY' eq ref $res->{'result'};
 
         return $res->{'result'};
     }
     elsif ($act eq 'exception') {
-        die 'recieved exception: ' . $res->{'message'};
+        die 'received exception: ' . $res->{'message'};
     }
     else {
-        die 'recieved unknown action: ' . $act;
+        die 'received unknown action: ' . $act;
     }
-}
-
-# _replace_objects(\%message)
-#
-# Prepare a message by replacing any Alien::Taco::Objects in it
-# with their HASH representation.
-
-sub _replace_objects {
-    filter_struct(shift, sub {
-        my $x = shift;
-        return blessed($x) and $x->isa('Alien::Taco::Object');
-    },
-    sub {
-        my $x = shift;
-        return {_Taco_Object_ => $x->_number()};
-    });
-}
-
-# _interpret_objects(\%message)
-#
-# Process a recieved message by replacing any HASH representations
-# of objects with Alien::Taco::Object instances.
-
-sub _interpret_objects {
-    my $self = shift;
-
-    filter_struct(shift, sub {
-        my $x = shift;
-        return ref $x eq 'HASH' && exists $x->{'_Taco_Object_'};
-    },
-    sub {
-        return new Alien::Taco::Object($self, shift->{'_Taco_Object_'});
-    });
 }
 
 =back
