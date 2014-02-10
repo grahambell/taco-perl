@@ -62,7 +62,13 @@ corrupt communications with the client.
 sub new {
     my $class = shift;
 
-    my $self = bless {}, $class;
+    # Create cache of objects held on the server side for which an
+    # object number is passed to the client.
+
+    my $self = bless {
+        nobject => 0,
+        objects => {},
+    }, $class;
 
     # Select STDERR as current file handle so that if a function is
     # called which in turn prints something, it doesn't go into the
@@ -85,7 +91,7 @@ sub _construct_transport {
 
     return new Alien::Taco::Transport(in => $in, out => $out,
             filter_single => ['_Taco_Object_' =>  sub {
-                return _get_object(shift);
+                return $self->_get_object(shift);
             }],
     );
 }
@@ -123,7 +129,7 @@ sub run {
             };
         }
 
-        _replace_objects($res);
+        $self->_replace_objects($res);
         $xp->write($res);
     }
 }
@@ -162,46 +168,42 @@ sub _make_result {
 
 my $null_result = _make_result(undef);
 
-do {
-    # Cache of objects held on the server side for which an object number
-    # is passed to the client.
+# _replace_objects(\%message)
+#
+# Replace objects in the given message with Taco object number references.
 
-    my %object = ();
-    my $nobject = 0;
+sub _replace_objects {
+    my $self = shift;
+    filter_struct(shift, sub {
+        my $x = shift;
+        blessed($x) and not JSON::is_bool($x);
+    },
+    sub {
+        my $n = ++ $self->{'nobject'};
+        $self->{'objects'}->{$n} = shift;
+        return {_Taco_Object_ => $n};
+    });
+}
 
-    # _replace_objects(\%message)
-    #
-    # Replace objects in the given message with Taco object number references.
+# _delete_object($number)
+#
+# Delete an object from the cache.
 
-    sub _replace_objects {
-        filter_struct(shift, sub {
-            my $x = shift;
-            blessed($x) and not JSON::is_bool($x);
-        },
-        sub {
-            $object{++ $nobject} = shift;
-            return {_Taco_Object_ => $nobject};
-        });
-    }
+sub _delete_object {
+    my $self = shift;
+    my $n = shift;
+    delete $self->{'objects'}->{$n};
+}
 
-    # _delete_object($number)
-    #
-    # Delete an object from the cache.
+# _get_object($number)
+#
+# Fetch an object from the cache.
 
-    sub _delete_object {
-        my $n = shift;
-        delete $object{$n};
-    }
-
-    # _get_object($number)
-    #
-    # Fetch an object from the cache.
-
-    sub _get_object {
-        my $n = shift;
-        return $object{$n};
-    }
-};
+sub _get_object {
+    my $self = shift;
+    my $n = shift;
+    return $self->{'objects'}->{$n};
+}
 
 =back
 
@@ -308,7 +310,7 @@ sub call_method {
     my $name = $message->{'name'};
     my @param = _get_param($message);
 
-    my $object = _get_object($number);
+    my $object = $self->_get_object($number);
 
     my $result = undef;
     unless (defined $message->{'context'}
@@ -360,7 +362,7 @@ sub destroy_object {
     my $message = shift;
 
     my $n = $message->{'number'};
-    _delete_object($n);
+    $self->_delete_object($n);
 
     return $null_result;
 }
@@ -381,7 +383,7 @@ sub get_attribute {
     my $number = $message->{'number'};
     my $name = $message->{'name'};
 
-    my $object = _get_object($number);
+    my $object = $self->_get_object($number);
 
     die 'object is not a hash' unless $object->isa('HASH');
 
@@ -454,7 +456,7 @@ sub set_attribute {
     my $name = $message->{'name'};
     my $value = $message->{'value'};
 
-    my $object = _get_object($number);
+    my $object = $self->_get_object($number);
 
     die 'object is not a hash' unless $object->isa('HASH');
 

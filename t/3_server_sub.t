@@ -47,19 +47,19 @@ my $obj = DateTime->now();
 
 my %hash = (test_object => $obj);
 
-Alien::Taco::Server::_replace_objects(\%hash);
+$s->_replace_objects(\%hash);
 
 is_deeply($hash{'test_object'}, {_Taco_Object_ => 1}, 'replace object');
 
-isa_ok(Alien::Taco::Server::_get_object(1), 'DateTime');
+isa_ok($s->_get_object(1), 'DateTime');
 
 $s->prepare_input('{"x": {"_Taco_Object_": 1}}');
 my $r = $s->{'xp'}->read();
 isa_ok($r->{'x'}, 'DateTime');
 
-Alien::Taco::Server::_delete_object(1);
+$s->_delete_object(1);
 
-is(Alien::Taco::Server::_get_object(1), undef, 'delete object');
+is($s->_get_object(1), undef, 'delete object');
 
 
 # Dummy Taco server.
@@ -75,6 +75,8 @@ sub new {
     my $out_io = new IO::String();
 
     my $self = bless {
+        nobject => 0,
+        objects => {},
         in_io => $in_io,
         out_io => $out_io,
     }, $class;

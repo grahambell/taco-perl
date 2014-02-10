@@ -14,9 +14,8 @@ our $variable = 1234;
 # Insert the test object manually as we are not using the server's main loop
 # which normally calls _replace_objects.
 my $o = new TestObject();
-Alien::Taco::Server::_replace_objects({o => $o});
-
-my $s = bless {}, 'Alien::Taco::Server';
+my $s = new TestServer();
+$s->_replace_objects({o => $o});
 
 is_deeply($s->call_class_method({
         name => 'class_method',
@@ -103,10 +102,10 @@ is_deeply($s->destroy_object({
     },
     'destroy_object');
 
-is(Alien::Taco::Server::_get_object(1), undef, 'object deleted');
+is($s->_get_object(1), undef, 'object deleted');
 
 # Put it back for further tests.
-Alien::Taco::Server::_replace_objects({o => $o});
+$s->_replace_objects({o => $o});
 
 
 is_deeply($s->get_attribute({
@@ -190,4 +189,17 @@ our @use_param;
 sub import {
     my $package = shift;
     @use_param = @_;
+}
+
+
+package TestServer;
+
+use parent 'Alien::Taco::Server';
+
+sub new {
+    my $class = shift;
+    return bless {
+        nobject => 0,
+        objects => {},
+    }, $class;
 }
