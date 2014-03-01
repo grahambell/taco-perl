@@ -235,7 +235,7 @@ sub call_class_method {
         my @result = $c->$f(@param);
         $result = \@result;
     }
-    elsif ($message->{'context'} eq 'hash') {
+    elsif ($message->{'context'} eq 'map') {
         my %result = $c->$f(@param);
         $result = \%result;
     }
@@ -255,7 +255,7 @@ sub call_class_method {
 
 Call the function specified in the message.  The function is called
 in the requested context (void / scalar / list) if specified.  A
-context of "hash" can also be specified to avoid the client having
+context of "map" can also be specified to avoid the client having
 to convert a list to a hash in cases where the function returns
 a hash directly.
 
@@ -282,7 +282,7 @@ sub call_function {
         my @result = $f->(@param);
         $result = \@result;
     }
-    elsif ($message->{'context'} eq 'hash') {
+    elsif ($message->{'context'} eq 'map') {
         my %result = $f->(@param);
         $result = \%result;
     }
@@ -321,7 +321,7 @@ sub call_method {
         my @result = $object->$name(@param);
         $result = \@result;
     }
-    elsif ($message->{'context'} eq 'hash') {
+    elsif ($message->{'context'} eq 'map') {
         my %result = $object->$name(@param);
         $result = \%result;
     }

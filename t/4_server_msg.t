@@ -56,15 +56,15 @@ is_deeply($s->call_method({
         name => 'test_method',
         args => ['AAA'],
         kwargs => {BBB => 'CCC'},
-        context => 'hash',
+        context => 'map',
     }),
     {
         action => 'result',
         result => {55555 => 666666},
     },
-    'call_method (hash)');
+    'call_method (map)');
 
-ok($o->{'context'}, 'hash context');
+ok($o->{'context'}, 'map context');
 
 is_deeply($o->{'param'}, [qw/AAA BBB CCC/], 'method paramters');
 
