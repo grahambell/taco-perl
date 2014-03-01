@@ -8,7 +8,8 @@ use Test::More tests => 19;
 
 BEGIN {use_ok('Alien::Taco::Server');}
 
-my ($context, @param, $test_var);
+my $context = 'not set yet';
+my (@param, $test_var);
 our $variable = 1234;
 
 # Insert the test object manually as we are not using the server's main loop
@@ -90,7 +91,7 @@ my $res = $s->construct_object({
         kwargs => undef,
     });
 
-isa_ok(my $o = $res->{'result'}, 'TestObject');
+isa_ok($res->{'result'}, 'TestObject');
 
 
 is_deeply($s->destroy_object({
@@ -161,7 +162,7 @@ sub test_func {
 
 package TestObject;
 
-our $context = 'not set yet';
+$TestObject::context = 'not set yet';
 
 sub new {
     my $class = shift;

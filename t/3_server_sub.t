@@ -90,7 +90,7 @@ sub prepare_input {
     my $self = shift;
 
     ${$self->{'in_io'}->string_ref()} = shift . "\n// END\n";
-    $self->{'in_io'}->seek(0);
+    $self->{'in_io'}->seek(0, 0);
 }
 
 sub get_output {
@@ -98,7 +98,7 @@ sub get_output {
 
     my $text = ${$self->{'out_io'}->string_ref()};
     ${$self->{'out_io'}->string_ref()} = '';
-    $self->{'out_io'}->seek(0);
+    $self->{'out_io'}->seek(0, 0);
 
     die 'end marker not found' unless $text =~ s/\n\/\/ END\n$//;
     return $text;

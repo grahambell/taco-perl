@@ -36,7 +36,7 @@ like($@, qr/test_exc/, 're-raise exception');
 
 $t->prepare_input('{"action": "result", "result": {"_Taco_Object_": 678}}');
 $t->get_output();
-my $res = $t->_interact({x => new Alien::Taco::Object(undef, 78)});
+my $res = $t->_interact({x => new Alien::Taco::Object($t, 78)});
 
 is($t->get_output(), '{"x":{"_Taco_Object_":78}}', 'replace object');
 
@@ -70,7 +70,7 @@ sub prepare_input {
     my $self = shift;
 
     ${$self->{'in_io'}->string_ref()} = shift . "\n// END\n";
-    $self->{'in_io'}->seek(0);
+    $self->{'in_io'}->seek(0, 0);
 }
 
 sub get_output {
@@ -78,7 +78,7 @@ sub get_output {
 
     my $text = ${$self->{'out_io'}->string_ref()};
     ${$self->{'out_io'}->string_ref()} = '';
-    $self->{'out_io'}->seek(0);
+    $self->{'out_io'}->seek(0, 0);
 
     die 'end marker not found' unless $text =~ s/\n\/\/ END\n$//;
     return $text;
