@@ -9,6 +9,7 @@ lib/Alien/Taco/Util.pm
 MANIFEST
 META.json
 META.yml
+README.pod
 t/1_compile.t
 t/2_object.t
 t/2_transport.t
