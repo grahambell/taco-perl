@@ -96,6 +96,8 @@ sub write {
     my $out = $self->{'out'};
 
     my $text = $self->{'json'}->encode(shift);
+
+    local $\ = '';
     print $out $text;
     print $out "\n\/\/ END\n";
     $out->flush();
