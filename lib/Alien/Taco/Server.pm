@@ -179,8 +179,8 @@ sub _replace_objects {
         blessed($x) and not JSON::is_bool($x);
     },
     sub {
-        my $n = ++ $self->{'nobject'};
-        $self->{'objects'}->{$n} = shift;
+        my $nn = my $n = ++ $self->{'nobject'};
+        $self->{'objects'}->{$nn} = shift;
         return {_Taco_Object_ => $n};
     });
 }
