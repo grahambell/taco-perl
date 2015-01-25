@@ -16,6 +16,9 @@ my $class = Module::Build->subclass(
         sub ACTION_tipython {
             shift->run_taco_tests(<ti-python/*.t>);
         }
+        sub ACTION_tijava {
+            shift->run_taco_tests(<ti-java/*.t>);
+        }
         sub run_taco_tests {
             my $self = shift;
             $self->depends_on('code');
