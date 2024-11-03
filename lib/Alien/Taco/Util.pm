@@ -1,5 +1,5 @@
 # Taco Perl utility module.
-# Copyright (C) 2013 Graham Bell
+# Copyright (C) 2013-2024 Graham Bell
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -41,8 +41,8 @@ our @EXPORT_OK = qw/filter_struct/;
 
 =item filter_struct($ref, $predicate, $function)
 
-Walk through the given data structure and replace each entry
-for which the predicate is true with the result of applying the
+Walk through the given data structure and return a copy with each entry
+for which the predicate is true replaced with the result of applying the
 function to it.
 
 =cut
@@ -54,26 +54,17 @@ sub filter_struct {
 
     my $type = ref $x;
 
-    if ($type eq 'HASH') {
-        foreach my $k (keys %$x) {
-            if ($pred->($x->{$k})) {
-                $x->{$k} = $func->($x->{$k});
-            }
-            elsif (ref $x->{$k}) {
-                filter_struct($x->{$k}, $pred, $func);
-            }
-        }
+    if ($pred->($x)) {
+        return $func->($x);
+    }
+    elsif ($type eq 'HASH') {
+        return {map {$_ => filter_struct($x->{$_}, $pred, $func)} keys %$x};
     }
     elsif ($type eq 'ARRAY') {
-        for (my $i = 0; $i < scalar @$x; $i ++) {
-            if ($pred->($x->[$i])) {
-                $x->[$i] = $func->($x->[$i]);
-            }
-            elsif (ref $x->[$i]) {
-                filter_struct($x->[$i], $pred, $func);
-            }
-        }
+        return [map {filter_struct($_, $pred, $func)} @$x];
     }
+
+    return $x;
 }
 
 1;

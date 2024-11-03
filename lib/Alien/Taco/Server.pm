@@ -1,5 +1,5 @@
 # Taco Perl server module.
-# Copyright (C) 2013-2014 Graham Bell
+# Copyright (C) 2013-2024 Graham Bell
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -129,8 +129,7 @@ sub run {
             };
         }
 
-        $self->_replace_objects($res);
-        $xp->write($res);
+        $xp->write($self->_replace_objects($res));
     }
 }
 
@@ -174,7 +173,7 @@ my $null_result = _make_result(undef);
 
 sub _replace_objects {
     my $self = shift;
-    filter_struct(shift, sub {
+    return filter_struct(shift, sub {
         my $x = shift;
         blessed($x) and not JSON::is_bool($x);
     },

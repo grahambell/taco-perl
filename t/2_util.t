@@ -40,7 +40,7 @@ $out = {
     },
 };
 
-filter_struct($in, sub {
+my $result = filter_struct($in, sub {
         my $x = shift;
         return ref $x eq 'HASH' && exists $x->{'replace_me'};
     },
@@ -49,4 +49,4 @@ filter_struct($in, sub {
         return {'replacement' => $x->{'replace_me'}};
     });
 
-is_deeply($in, $out, 'filter_struct with replace_me hash entries');
+is_deeply($result, $out, 'filter_struct with replace_me hash entries');

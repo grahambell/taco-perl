@@ -47,9 +47,9 @@ my $obj = DateTime->now();
 
 my %hash = (test_object => $obj);
 
-$s->_replace_objects(\%hash);
+my $filtered = $s->_replace_objects(\%hash);
 
-is_deeply($hash{'test_object'}, {_Taco_Object_ => 1}, 'replace object');
+is_deeply($filtered->{'test_object'}, {_Taco_Object_ => 1}, 'replace object');
 
 isa_ok($s->_get_object(1), 'DateTime');
 
